@@ -67,6 +67,30 @@ export function isFormValid(
   return previous > 0 && current > previous && gallons > 0 && price > 0
 }
 
+/**
+ * Why an edited log can't be saved, or null if it can. Same rules as the server:
+ * the normal form rules, plus the odometer has to stay below the next log's,
+ * because the next log will start at the edited reading.
+ */
+export function editProblem(
+  previous: number | null,
+  current: number | null,
+  gallons: number | null,
+  price: number | null,
+  nextOdometer: number | null,
+): string | null {
+  if (previous === null || !(previous > 0)) return 'Previous odometer must be greater than 0.'
+  if (current === null || !(current > previous)) {
+    return `Odometer must be greater than ${formatWhole(previous)} mi.`
+  }
+  if (nextOdometer !== null && !(current < nextOdometer)) {
+    return `Odometer must be less than ${formatWhole(nextOdometer)} mi (the next log).`
+  }
+  if (gallons === null || !(gallons > 0)) return 'Gallons must be greater than 0.'
+  if (price === null || !(price > 0)) return 'Price per gallon must be greater than 0.'
+  return null
+}
+
 // ---- Formatting (en-US, matching the Swift .formatted() calls) ----
 
 const wholeNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })

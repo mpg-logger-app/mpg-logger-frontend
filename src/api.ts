@@ -44,6 +44,16 @@ export async function createFuelLog(log: NewFuelLog): Promise<FuelLog> {
   return response.json()
 }
 
+/** previousOdometer is only used by the server when editing the oldest log. */
+export async function updateFuelLog(id: number, log: NewFuelLog): Promise<FuelLog> {
+  const response = await request(`${BASE}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(log),
+  })
+  return response.json()
+}
+
 export async function deleteFuelLog(id: number): Promise<void> {
   await request(`${BASE}/${id}`, { method: 'DELETE' })
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createFuelLog, deleteFuelLog, listFuelLogs } from './api.ts'
+import FuelLogEditor from './FuelLogEditor.tsx'
 import {
   calcMilesDriven,
   calcMpg,
@@ -29,6 +30,9 @@ export default function App() {
 
   const [saving, setSaving] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+
+  // The history row being edited in place (one at a time).
+  const [editingId, setEditingId] = useState<number | null>(null)
 
   const refresh = useCallback(async () => {
     try {
@@ -71,6 +75,11 @@ export default function App() {
   const totalCost = calcTotalCost(gallonsValue, priceValue)
   const formIsValid =
     fuelLogs !== null && isFormValid(previousOdometerValue, currentValue, gallonsValue, priceValue)
+  // Only shown once both readings are typed, so an empty form isn't covered in errors.
+  const odometerProblem =
+    previousOdometerValue !== null && currentValue !== null && !(currentValue > previousOdometerValue)
+      ? `Current odometer must be greater than ${formatWhole(previousOdometerValue)} mi.`
+      : null
 
   // Swift: logFuelEntry()
   async function logFuelEntry(event: FormEvent) {
@@ -169,6 +178,7 @@ export default function App() {
                 onChange={(e) => setCurrentOdometer(e.target.value)}
               />
             </label>
+            {odometerProblem && <div className="row edit-problem">{odometerProblem}</div>}
 
             <label className="row">
               <span className="sr-only">Gallons Pumped</span>
@@ -239,27 +249,53 @@ export default function App() {
           {fuelLogs !== null && logs.length === 0 && (
             <div className="row secondary">No fuel entries logged yet.</div>
           )}
-          {logs.map((log) => (
-            <div className="row history" key={log.id}>
-              <div className="history-text">
-                <div className="headline">{formatLogDate(log.date)}</div>
-                <div>Odometer: {formatWhole(log.odometer)} mi</div>
-                <div>Miles driven: {formatWhole(log.milesDriven)}</div>
-                <div>Gallons: {formatTwo(log.gallons)}</div>
-                <div>Price: {formatUsd(log.pricePerGallon)}/gal</div>
-                <div>Cost: {formatUsd(log.totalCost)}</div>
-                <div className="bold">MPG: {formatTwo(log.mpg)}</div>
+          {logs.map((log, index) =>
+            log.id === editingId ? (
+              <FuelLogEditor
+                key={log.id}
+                log={log}
+                // Logs are newest first, so the oldest is last and the next (newer) log is just above.
+                isOldest={index === logs.length - 1}
+                nextOdometer={index > 0 ? logs[index - 1].odometer : null}
+                onSaved={async () => {
+                  await refresh()
+                  setEditingId(null)
+                }}
+                onCancel={() => setEditingId(null)}
+              />
+            ) : (
+              <div className="row history" key={log.id}>
+                <div className="history-text">
+                  <div className="headline">{formatLogDate(log.date)}</div>
+                  <div>Odometer: {formatWhole(log.odometer)} mi</div>
+                  <div>Miles driven: {formatWhole(log.milesDriven)}</div>
+                  <div>Gallons: {formatTwo(log.gallons)}</div>
+                  <div>Price: {formatUsd(log.pricePerGallon)}/gal</div>
+                  <div>Cost: {formatUsd(log.totalCost)}</div>
+                  <div className="bold">MPG: {formatTwo(log.mpg)}</div>
+                </div>
+                <div className="row-actions">
+                  <button
+                    type="button"
+                    className="edit"
+                    onClick={() => setEditingId(log.id)}
+                    disabled={editingId !== null}
+                    aria-label={`Edit entry from ${formatLogDate(log.date)}`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="delete"
+                    onClick={() => void deleteLog(log)}
+                    aria-label={`Delete entry from ${formatLogDate(log.date)}`}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                className="delete"
-                onClick={() => void deleteLog(log)}
-                aria-label={`Delete entry from ${formatLogDate(log.date)}`}
-              >
-                Delete
-              </button>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       </section>
     </main>

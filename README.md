@@ -22,5 +22,16 @@ Open http://localhost:5173. During development Vite forwards `/api/*` requests t
 | `src/App.tsx` | `ContentView.swift` (form, calculations, history, delete) |
 | `src/fuel.ts` | Computed properties and formatting from `ContentView.swift` / `FuelLog.swift` |
 | `src/api.ts` | SwiftData `modelContext` insert/delete/query → REST calls |
+| `src/FuelLogEditor.tsx` | New: edit a history row in place (Save / Cancel) |
+
+## Tests
+
+Vitest + React Testing Library, with the API mocked (no backend needed).
+Tests sit next to the code as `*.test.ts(x)`; shared helpers are in `src/test/`.
+
+```powershell
+npm test               # run once
+npm run coverage       # also prints coverage and writes coverage/index.html
+```
 
 Other scripts: `npm run build` (type-check + production build), `npm run lint`.
