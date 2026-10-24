@@ -1,6 +1,7 @@
 /* Styled after the SwiftUI grouped Form, with the app's pink accent. */
 :root {
   --accent: #ff2d55;
+  --action: #007aff; /* iOS system blue, so Edit/Save don't look like the red Delete */
   --bg: #f2f2f7;
   --card: #ffffff;
   --text: #000000;
@@ -19,6 +20,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --action: #0a84ff;
     --bg: #000000;
     --card: #1c1c1e;
     --text: #ffffff;
@@ -106,10 +108,6 @@ input[type='date'] {
   padding: 4px 8px;
 }
 
-input:focus-visible {
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
-
 .secondary {
   color: var(--secondary);
 }
@@ -162,6 +160,72 @@ button.delete {
   background: transparent;
   color: #ff3b30;
   padding: 4px 0;
+}
+
+.row-actions {
+  display: flex;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+button.edit,
+button.save,
+button.cancel {
+  border: none;
+  background: transparent;
+  color: var(--action);
+  padding: 4px 0;
+}
+
+button.save {
+  font-weight: 600;
+}
+
+button.cancel {
+  color: var(--secondary);
+}
+
+/* Same red as Delete, since Cancel throws away the edits. */
+button.cancel:hover:not(:disabled) {
+  color: #ff3b30;
+}
+
+.row-actions button:disabled {
+  color: var(--secondary);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A history row while it is being edited in place. */
+.editing .history-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edit-field input {
+  width: 9em;
+  min-width: 0;
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+  text-align: right;
+}
+
+.edit-field input[type='date'] {
+  width: auto;
+  text-align: left;
+}
+
+.edit-problem {
+  color: var(--error-text);
+  font-size: 15px;
 }
 
 button.link {
