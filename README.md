@@ -50,13 +50,22 @@ Icons are in `public/`; the PNGs were generated from `public/favicon.svg` and
 
 ## Hosting
 
-- Serve the app and the API from **one origin**, e.g. `https://mpg.example.com` for the app and
-  `https://mpg.example.com/api/*` forwarded to Spring Boot, the same way Vite does in development.
-  The session cookie is `SameSite=Lax` and scoped to `/api`, so a backend on a different site
-  won't receive it.
-- Use HTTPS, so the cookie is sent with `Secure`.
-- Paths like `/home` are handled in the browser, so the host must answer unknown paths with
-  `index.html` (the "SPA fallback" / rewrite setting on Netlify, Vercel, nginx `try_files`, etc.).
+The app is hosted for free on **Netlify**, with the Spring Boot API on Google Cloud Run. The full
+step-by-step guide is
+[`HOSTING.md` in the backend repo](https://github.com/mpg-logger-app/mpg-logger-backend/blob/develop/HOSTING.md).
+[`netlify.toml`](netlify.toml) holds the whole Netlify setup:
+
+- **Build:** `npm run build`, publishing `dist`.
+- **`/api/*` is forwarded to Cloud Run** (put the backend's address in `netlify.toml` once it is
+  deployed). The browser only sees the Netlify address, so the app and the API share one origin, the
+  same way Vite does in development. That matters because the session cookie is `SameSite=Lax` and
+  scoped to `/api`: a backend on a different site wouldn't receive it.
+- **SPA fallback:** paths like `/home` are handled in the browser, so every path that isn't a real
+  file gets `index.html`.
+- **Caching:** `index.html` and `sw.js` are always revalidated so a deploy shows up straight away;
+  hashed `/assets/*` files are cached for a year.
+
+Netlify serves everything over HTTPS, so the cookie is sent with `Secure` and the app can be installed.
 
 ## Where things are
 
