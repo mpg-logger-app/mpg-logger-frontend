@@ -1,0 +1,193 @@
+/* Styled after the SwiftUI grouped Form, with the app's pink accent. */
+:root {
+  --accent: #ff2d55;
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --text: #000000;
+  --secondary: #6e6e73;
+  --separator: #d1d1d6;
+  --error-bg: #ffe5e9;
+  --error-text: #a3002a;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.35;
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #ffffff;
+    --secondary: #98989f;
+    --separator: #38383a;
+    --error-bg: #3a0d16;
+    --error-text: #ff8fa3;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+h1 {
+  font-size: 34px;
+  font-weight: 700;
+  margin: 8px 4px 20px;
+}
+
+section {
+  margin-bottom: 28px;
+}
+
+h2 {
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--secondary);
+  margin: 0 16px 6px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+
+.row + .row {
+  border-top: 0.5px solid var(--separator);
+}
+
+input {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+input.full {
+  width: 100%;
+  padding: 0;
+}
+
+input::placeholder {
+  color: var(--secondary);
+  opacity: 0.8;
+}
+
+input[type='date'] {
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+input:focus-visible {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.secondary {
+  color: var(--secondary);
+}
+
+.semibold {
+  font-weight: 600;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.headline {
+  font-weight: 600;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+button.primary:disabled {
+  color: var(--secondary);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.history {
+  align-items: flex-start;
+}
+
+.history-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 5px 0;
+}
+
+button.delete {
+  border: none;
+  background: transparent;
+  color: #ff3b30;
+  padding: 4px 0;
+}
+
+button.link {
+  border: none;
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.banner {
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin: 10px 0 20px;
+}
+
+.banner.error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
