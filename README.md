@@ -15,28 +15,65 @@ npm run dev
 Open http://localhost:5173. During development Vite forwards `/api/*` requests to
 `http://localhost:8080` (see `vite.config.ts`), so no CORS setup is needed.
 
-## Where things are
+## Pages
 
-| File | Ported from |
+| Path | Page |
 |---|---|
-| `src/App.tsx` | `ContentView.swift` (form, calculations, history, delete) |
-| `src/fuel.ts` | Computed properties and formatting from `ContentView.swift` / `FuelLog.swift` |
-| `src/api.ts` | SwiftData `modelContext` insert/delete/query → REST calls |
-| `src/FuelLogEditor.tsx` | New: edit a history row in place (Save / Cancel) |
+| `/` | Landing page explaining the app, with **Sign in** / **Sign up** at the top right. Signed-in visitors skip to `/home`. |
+| `/signin`, `/signup` | One page with a switch between the two. Sign-up asks for username, name and password only. |
+| `/home` | The fuel log itself (signed in only). |
+| `/account` | Change your name; says password changes are on the way (signed in only). |
+
+Signing in sets an HttpOnly session cookie that lasts until **Sign out**, even after the tab or
+browser is closed. On load the app asks `GET /api/account` who is signed in.
 
 ## Phones and installing (PWA)
 
-The layout adapts to phone widths (bigger tap targets, edit row stacks its buttons) and keeps clear
-of the notch when installed. The app can be added to the home screen:
+The layout is one column on phones and two on desktop, with finger-sized tap targets, an edit row
+that stacks its buttons on narrow screens, and padding that keeps clear of the notch when installed.
+The app can be added to the home screen:
 
 - **Android (Chrome):** menu → *Add to Home screen* / *Install app*.
 - **iPhone (Safari):** Share → *Add to Home Screen*.
+- **Desktop (Chrome/Edge):** the install icon in the address bar.
 
-Installing needs the app served over **HTTPS** (or `localhost`), from a production build
-(`npm run build`). The service worker (`public/sw.js`) only registers in production builds; it keeps
-the app shell available offline and never caches `/api` calls. Icons are in `public/`; the PNGs were
-generated from `public/favicon.svg` and `icons/icon-full-bleed.svg` (the full-bleed one is used where
-the OS crops the icon: Android "maskable" and the iOS home-screen icon).
+Installing needs the app served over **HTTPS** (or `localhost`), from a production build.
+The service worker (`public/sw.js`) only registers in production builds; it keeps the app shell
+available offline and never caches `/api` calls, so fuel logs are always live. Without a connection,
+signed-in pages say they can't connect instead of asking you to sign in. Bump `CACHE` in `sw.js`
+when its caching rules change. Try it locally with `npm run build` then `npm run preview`
+(http://localhost:4173, which also forwards `/api` to 8080).
+
+Icons are in `public/`; the PNGs were generated from `public/favicon.svg` and
+`icons/icon-full-bleed.svg` (the full-bleed one is used where the OS crops the icon: Android
+"maskable" and the iOS home-screen icon).
+
+## Hosting
+
+- Serve the app and the API from **one origin**, e.g. `https://mpg.example.com` for the app and
+  `https://mpg.example.com/api/*` forwarded to Spring Boot, the same way Vite does in development.
+  The session cookie is `SameSite=Lax` and scoped to `/api`, so a backend on a different site
+  won't receive it.
+- Use HTTPS, so the cookie is sent with `Secure`.
+- Paths like `/home` are handled in the browser, so the host must answer unknown paths with
+  `index.html` (the "SPA fallback" / rewrite setting on Netlify, Vercel, nginx `try_files`, etc.).
+
+## Where things are
+
+| File | What it is |
+|---|---|
+| `src/main.tsx`, `src/AppRoutes.tsx` | Router and the list of pages |
+| `src/auth.tsx`, `src/useAuth.ts` | Who is signed in; `RequireAuth` / `RedirectIfSignedIn` guards |
+| `src/Landing.tsx` | Landing page |
+| `src/AuthPage.tsx` | Sign in / sign up |
+| `src/AppLayout.tsx` | Top bar on signed-in pages (menu with Profile / Sign out) |
+| `src/AccountPage.tsx` | Account details |
+| `src/account.ts` | `Account` type and sign-up rules (same as the backend's) |
+| `src/App.tsx` | The fuel log, ported from `ContentView.swift` (form, calculations, history, delete) |
+| `src/fuel.ts` | Computed properties and formatting from `ContentView.swift` / `FuelLog.swift` |
+| `src/api.ts` | REST calls (SwiftData `modelContext` insert/delete/query, plus accounts) |
+| `src/FuelLogEditor.tsx` | Edit a history row in place (Save / Cancel) |
+| `src/registerServiceWorker.ts`, `public/sw.js` | PWA service worker and its registration |
 
 ## Tests
 

@@ -10,6 +10,12 @@ export default defineConfig({
       '/api': 'http://localhost:8080',
     },
   },
+  // Same for `npm run preview`, which serves the production build (the only place the service worker runs).
+  preview: {
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
   // `npm test` runs the tests once; `npm run coverage` also writes coverage/index.html.
   test: {
     environment: 'jsdom',
