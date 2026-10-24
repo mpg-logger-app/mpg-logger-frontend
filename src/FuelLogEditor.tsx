@@ -5,6 +5,8 @@ import {
   calcMilesDriven,
   calcMpg,
   calcTotalCost,
+  decimalOnly,
+  digitsOnly,
   editProblem,
   formatLogDate,
   formatTwo,
@@ -98,7 +100,7 @@ export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, on
               type="text"
               inputMode="numeric"
               value={previousOdometer}
-              onChange={(e) => setPreviousOdometer(e.target.value)}
+              onChange={(e) => setPreviousOdometer(digitsOnly(e.target.value))}
             />
           </label>
         ) : (
@@ -114,7 +116,7 @@ export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, on
             type="text"
             inputMode="numeric"
             value={odometer}
-            onChange={(e) => setOdometer(e.target.value)}
+            onChange={(e) => setOdometer(digitsOnly(e.target.value))}
             autoFocus
           />
         </label>
@@ -125,7 +127,7 @@ export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, on
             type="text"
             inputMode="decimal"
             value={gallons}
-            onChange={(e) => setGallons(e.target.value)}
+            onChange={(e) => setGallons(decimalOnly(e.target.value))}
           />
         </label>
 
@@ -135,7 +137,7 @@ export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, on
             type="text"
             inputMode="decimal"
             value={pricePerGallon}
-            onChange={(e) => setPricePerGallon(e.target.value)}
+            onChange={(e) => setPricePerGallon(decimalOnly(e.target.value))}
           />
         </label>
 

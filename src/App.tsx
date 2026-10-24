@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { createFuelLog, deleteFuelLog, listFuelLogs } from './api.ts'
+import ConfirmDialog from './ConfirmDialog.tsx'
 import FuelLogEditor from './FuelLogEditor.tsx'
+import Toast from './Toast.tsx'
+import type { ToastVariant } from './Toast.tsx'
 import {
   calcMilesDriven,
   calcMpg,
   calcTotalCost,
+  decimalOnly,
+  digitsOnly,
   formatLogDate,
   formatTwo,
   formatUsd,
@@ -33,6 +38,18 @@ export default function App() {
 
   // The history row being edited in place (one at a time).
   const [editingId, setEditingId] = useState<number | null>(null)
+
+  // The log waiting on the delete confirmation dialog.
+  const [pendingDelete, setPendingDelete] = useState<FuelLog | null>(null)
+  const cancelDelete = useCallback(() => setPendingDelete(null), [])
+
+  // The status toast; `key` is bumped each time so the animation replays. null hides it.
+  const [toast, setToast] = useState<{ key: number; message: string; variant: ToastVariant } | null>(
+    null,
+  )
+  const showToast = (message: string, variant: ToastVariant = 'success') =>
+    setToast((t) => ({ key: (t?.key ?? 0) + 1, message, variant }))
+  const hideToast = useCallback(() => setToast(null), [])
 
   const refresh = useCallback(async () => {
     try {
@@ -101,22 +118,27 @@ export default function App() {
       setGallons('')
       setPricePerGallon('')
       setFuelDate(todayIso())
+      showToast('Log saved')
       await refresh()
     } catch (e) {
+      // The toast says what failed; the banner keeps the reason on screen after it fades.
+      showToast("Couldn't save log", 'error')
       setActionError((e as Error).message)
     } finally {
       setSaving(false)
     }
   }
 
-  // Swift: deleteLogs(at:) — swipe-to-delete becomes a Delete button with a confirmation.
+  // Swift: deleteLogs(at:) — swipe-to-delete becomes a Delete button with a confirmation dialog.
   async function deleteLog(log: FuelLog) {
-    if (!window.confirm(`Delete the fuel entry from ${formatLogDate(log.date)}?`)) return
+    setPendingDelete(null)
     setActionError(null)
     try {
       await deleteFuelLog(log.id)
+      showToast('Log deleted')
       await refresh()
     } catch (e) {
+      showToast("Couldn't delete log", 'error')
       setActionError((e as Error).message)
     }
   }
@@ -157,7 +179,7 @@ export default function App() {
                   inputMode="numeric"
                   placeholder="Previous Odometer"
                   value={firstPreviousOdometer}
-                  onChange={(e) => setFirstPreviousOdometer(e.target.value)}
+                  onChange={(e) => setFirstPreviousOdometer(digitsOnly(e.target.value))}
                 />
               </label>
             ) : (
@@ -175,7 +197,7 @@ export default function App() {
                 inputMode="numeric"
                 placeholder="Current Odometer"
                 value={currentOdometer}
-                onChange={(e) => setCurrentOdometer(e.target.value)}
+                onChange={(e) => setCurrentOdometer(digitsOnly(e.target.value))}
               />
             </label>
             {odometerProblem && <div className="row edit-problem">{odometerProblem}</div>}
@@ -188,7 +210,7 @@ export default function App() {
                 inputMode="decimal"
                 placeholder="Gallons Pumped"
                 value={gallons}
-                onChange={(e) => setGallons(e.target.value)}
+                onChange={(e) => setGallons(decimalOnly(e.target.value))}
               />
             </label>
 
@@ -200,7 +222,7 @@ export default function App() {
                 inputMode="decimal"
                 placeholder="Price Per Gallon"
                 value={pricePerGallon}
-                onChange={(e) => setPricePerGallon(e.target.value)}
+                onChange={(e) => setPricePerGallon(decimalOnly(e.target.value))}
               />
             </label>
           </div>
@@ -287,7 +309,7 @@ export default function App() {
                   <button
                     type="button"
                     className="delete"
-                    onClick={() => void deleteLog(log)}
+                    onClick={() => setPendingDelete(log)}
                     aria-label={`Delete entry from ${formatLogDate(log.date)}`}
                   >
                     Delete
@@ -298,6 +320,20 @@ export default function App() {
           )}
         </div>
       </section>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete Fuel Entry?"
+          message={`The entry from ${formatLogDate(pendingDelete.date)} will be removed. This can't be undone.`}
+          confirmLabel="Delete"
+          onConfirm={() => void deleteLog(pendingDelete)}
+          onCancel={cancelDelete}
+        />
+      )}
+
+      {toast && (
+        <Toast key={toast.key} message={toast.message} variant={toast.variant} onDone={hideToast} />
+      )}
     </main>
   )
 }

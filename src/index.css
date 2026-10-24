@@ -255,3 +255,227 @@ button.link {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Status HUD (e.g. "Log saved", "Couldn't delete log") whose icon draws itself in. */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 160px;
+  padding: 24px 28px 20px;
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: toast-life 1.8s ease forwards;
+}
+
+.toast-icon {
+  width: 56px;
+  height: 56px;
+  fill: none;
+  stroke: #34c759; /* iOS system green */
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toast.error .toast-icon {
+  stroke: #ff3b30; /* same red as Delete */
+  animation: toast-shake 0.4s ease-in-out 0.75s;
+}
+
+.toast-icon-circle {
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: toast-draw 0.45s ease-out 0.1s forwards;
+}
+
+.toast-icon-mark {
+  stroke-width: 4;
+  stroke-dasharray: 46;
+  stroke-dashoffset: 46;
+  animation: toast-draw 0.3s ease-out 0.5s forwards;
+}
+
+@keyframes toast-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes toast-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+@keyframes toast-life {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  12%,
+  82% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast.error .toast-icon,
+  .toast-icon-circle,
+  .toast-icon-mark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Delete confirmation: a dimmed backdrop and an alert that springs in. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  animation: backdrop-in 0.2s ease-out;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--text);
+  text-align: center;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  animation: dialog-in 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dialog-body {
+  padding: 20px 16px 16px;
+}
+
+.dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  background: var(--error-bg);
+  animation: icon-shake 0.5s ease-in-out 0.3s;
+}
+
+.dialog-icon svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: #ff3b30;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dialog h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+}
+
+.dialog p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+.dialog-actions {
+  display: flex;
+  border-top: 0.5px solid var(--separator);
+}
+
+.dialog-actions button {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+}
+
+.dialog-actions button + button {
+  border-left: 0.5px solid var(--separator);
+}
+
+.dialog-cancel {
+  color: var(--action);
+}
+
+.dialog-confirm {
+  color: #ff3b30;
+  font-weight: 600;
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes icon-shake {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(-12deg);
+  }
+  40%,
+  80% {
+    transform: rotate(12deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog-backdrop,
+  .dialog,
+  .dialog-icon {
+    animation: none;
+  }
+}
