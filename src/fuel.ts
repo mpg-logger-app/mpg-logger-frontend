@@ -33,6 +33,20 @@ export function parseNumber(text: string): number | null {
   return Number.isFinite(value) ? value : null
 }
 
+/**
+ * Input filters for the number fields: whatever is typed or pasted, only
+ * digits get through ("12,3a00" -> "12300"). Odometers are whole miles.
+ */
+export function digitsOnly(text: string): string {
+  return text.replace(/\D/g, '')
+}
+
+/** Like digitsOnly, but keeps the first decimal point too ("$3.4.9" -> "3.49"). */
+export function decimalOnly(text: string): string {
+  const [whole, ...rest] = text.replace(/[^\d.]/g, '').split('.')
+  return rest.length ? `${whole}.${rest.join('')}` : whole
+}
+
 /** Swift: milesDriven (nil unless current > previous). */
 export function calcMilesDriven(previous: number | null, current: number | null): number | null {
   if (previous === null || current === null || !(current > previous)) {

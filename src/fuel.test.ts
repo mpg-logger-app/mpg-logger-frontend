@@ -11,6 +11,8 @@ import {
   isFormValid,
   parseNumber,
   todayIso,
+  decimalOnly,
+  digitsOnly,
 } from './fuel.ts'
 
 describe('parseNumber', () => {
@@ -29,6 +31,24 @@ describe('parseNumber', () => {
 
   it('returns null for a number too big to be finite', () => {
     expect(parseNumber('9'.repeat(400))).toBeNull()
+  })
+})
+
+describe('input filters', () => {
+  it('digitsOnly drops everything but digits', () => {
+    expect(digitsOnly('12300')).toBe('12300')
+    expect(digitsOnly('12,3a0-0 mi!')).toBe('12300')
+    expect(digitsOnly('12.5')).toBe('125')
+    expect(digitsOnly('abc')).toBe('')
+  })
+
+  it('decimalOnly keeps digits and the first decimal point', () => {
+    expect(decimalOnly('3.49')).toBe('3.49')
+    expect(decimalOnly('$3.4.9')).toBe('3.49')
+    expect(decimalOnly('10.')).toBe('10.')
+    expect(decimalOnly('.5')).toBe('.5')
+    expect(decimalOnly('-1e3 gal')).toBe('13')
+    expect(decimalOnly('abc')).toBe('')
   })
 })
 

@@ -1,9 +1,10 @@
 import { StrictMode } from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFuelLog, deleteFuelLog, listFuelLogs, updateFuelLog } from './api.ts'
 import App from './App.tsx'
+import { TOAST_DURATION_MS } from './Toast.tsx'
 import { makeLog, threeLogs } from './test/logs.ts'
 
 vi.mock('./api.ts', () => ({
@@ -127,6 +128,7 @@ describe('new fuel entry', () => {
     expect(listMock).toHaveBeenCalledTimes(2)
     expect(screen.getByLabelText('Current Odometer')).toHaveValue('')
     expect(screen.getByLabelText('Gallons Pumped')).toHaveValue('')
+    expect(screen.getByRole('status')).toHaveTextContent('Log saved')
   })
 
   it('asks for the previous odometer on the very first log and sends it', async () => {
@@ -198,6 +200,18 @@ describe('new fuel entry', () => {
     await vi.waitFor(() => expect(logButton()).toHaveTextContent('Log Fuel Entry'))
   })
 
+  it('only lets numbers be typed into the number fields', async () => {
+    await renderApp()
+
+    await type('Current Odometer', '13,2a0-0 mi')
+    await type('Gallons Pumped', '1x0.5.0 gal')
+    await type('Price Per Gallon', '$3.4!9')
+
+    expect(screen.getByLabelText('Current Odometer')).toHaveValue('13200')
+    expect(screen.getByLabelText('Gallons Pumped')).toHaveValue('10.50')
+    expect(screen.getByLabelText('Price Per Gallon')).toHaveValue('3.49')
+  })
+
   it('shows a save error and keeps what was typed', async () => {
     createMock.mockRejectedValue(new Error('Gallons must be greater than 0.'))
     await renderApp()
@@ -208,6 +222,9 @@ describe('new fuel entry', () => {
     await userEvent.click(logButton())
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Gallons must be greater than 0.')
+    const toast = screen.getByRole('status')
+    expect(toast).toHaveTextContent("Couldn't save log")
+    expect(toast).toHaveClass('error')
     expect(screen.getByLabelText('Current Odometer')).toHaveValue('13200')
     expect(logButton()).toBeEnabled()
   })
@@ -269,33 +286,84 @@ describe('editing a log', () => {
 })
 
 describe('deleting a log', () => {
-  it('does nothing if the confirmation is declined', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+  const deleteButton = (date: string) =>
+    screen.getByRole('button', { name: `Delete entry from ${date}` })
+  const dialog = () => screen.getByRole('alertdialog', { name: 'Delete Fuel Entry?' })
+  const confirmDelete = (user: Pick<typeof userEvent, 'click'> = userEvent) =>
+    user.click(within(dialog()).getByRole('button', { name: 'Delete' }))
+
+  it('asks for confirmation in a dialog, and does nothing if cancelled', async () => {
     await renderApp()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete entry from Oct 8, 2026' }))
-    expect(window.confirm).toHaveBeenCalledWith('Delete the fuel entry from Oct 8, 2026?')
+    await userEvent.click(deleteButton('Oct 8, 2026'))
+    expect(dialog()).toHaveTextContent('The entry from Oct 8, 2026 will be removed.')
+    expect(within(dialog()).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+
+    await userEvent.click(within(dialog()).getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(deleteMock).not.toHaveBeenCalled()
+  })
+
+  it('cancels with Escape or a tap on the backdrop', async () => {
+    await renderApp()
+
+    await userEvent.click(deleteButton('Oct 8, 2026'))
+    await userEvent.keyboard('a')
+    expect(dialog()).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    await userEvent.click(deleteButton('Oct 8, 2026'))
+    await userEvent.click(document.querySelector('.dialog-backdrop')!)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+
+    // A click inside the dialog itself doesn't dismiss it.
+    await userEvent.click(deleteButton('Oct 8, 2026'))
+    await userEvent.click(within(dialog()).getByText('Delete Fuel Entry?'))
+    expect(dialog()).toBeInTheDocument()
     expect(deleteMock).not.toHaveBeenCalled()
   })
 
   it('deletes after confirming and refreshes', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     deleteMock.mockResolvedValue()
     await renderApp()
 
     listMock.mockResolvedValue([makeLog(1, '2026-10-01', 12000, 12300)])
-    await userEvent.click(screen.getByRole('button', { name: 'Delete entry from Oct 15, 2026' }))
+    await userEvent.click(deleteButton('Oct 15, 2026'))
+    await confirmDelete()
 
     expect(deleteMock).toHaveBeenCalledWith(3)
+    expect(screen.queryByRole('alertdialog')).toBeNull()
     await vi.waitFor(() => expect(screen.queryByText('Oct 15, 2026')).toBeNull())
   })
 
+  it('shows a "Log deleted" check mark that dismisses itself', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 9, 24))
+    deleteMock.mockResolvedValue()
+    await renderApp()
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await user.click(deleteButton('Oct 15, 2026'))
+    await confirmDelete(user)
+    const toast = await screen.findByRole('status')
+    expect(toast).toHaveTextContent('Log deleted')
+    expect(toast).toHaveClass('success')
+    expect(toast.querySelector('svg.toast-icon')).not.toBeNull()
+
+    act(() => vi.advanceTimersByTime(TOAST_DURATION_MS))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
   it('shows a delete error', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     deleteMock.mockRejectedValue(new Error('Fuel log 3 not found.'))
     await renderApp()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete entry from Oct 15, 2026' }))
+    await userEvent.click(deleteButton('Oct 15, 2026'))
+    await confirmDelete()
     expect(await screen.findByRole('alert')).toHaveTextContent('Fuel log 3 not found.')
+    const toast = screen.getByRole('status')
+    expect(toast).toHaveTextContent("Couldn't delete log")
+    expect(toast).toHaveClass('error')
   })
 })

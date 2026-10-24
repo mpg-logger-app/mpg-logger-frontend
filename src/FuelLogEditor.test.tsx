@@ -77,8 +77,9 @@ describe('FuelLogEditor', () => {
   it('enables Save only after a real change', async () => {
     const { save } = renderEditor()
 
-    await replace('Odometer', '12600.0') // same number, different text
+    await replace('Gallons', '10.0') // same number, different text
     expect(save).toBeDisabled()
+    await replace('Gallons', '10')
 
     await replace('Odometer', '12650')
     expect(save).toBeEnabled()
