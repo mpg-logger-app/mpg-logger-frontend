@@ -1,15 +1,24 @@
 import { useEffect, useRef } from 'react'
 
 type Props = {
+  /** The question, e.g. "Delete Fuel Entry?" */
   title: string
+  /** What will happen, e.g. "The entry from Oct 8, 2026 will be removed." */
   message: string
+  /** The red button's text, e.g. "Delete". */
   confirmLabel: string
   onConfirm: () => void
+  /** Called for Cancel, Escape or a tap on the backdrop. */
   onCancel: () => void
 }
 
-// An iOS-style alert that animates in, replacing window.confirm for destructive actions.
-// Escape or a tap on the backdrop cancels; Cancel gets focus so Enter can't delete by accident.
+/**
+ * An iOS-style alert that animates in, replacing window.confirm for destructive actions.
+ * Escape or a tap on the backdrop cancels; Cancel gets focus so Enter can't delete by accident.
+ *
+ * @param props see Props
+ * @returns the dialog over a dimmed backdrop
+ */
 export default function ConfirmDialog({ title, message, confirmLabel, onConfirm, onCancel }: Props) {
   const cancelRef = useRef<HTMLButtonElement>(null)
 

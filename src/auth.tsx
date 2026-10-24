@@ -8,6 +8,9 @@ import { AuthContext, useAuth } from './useAuth.ts'
 /**
  * Knows who is signed in. The session itself is an HttpOnly cookie the browser keeps until
  * sign-out (even after the browser is closed); on load this asks the backend whose it is.
+ *
+ * @param props.children the app; read the state with useAuth()
+ * @returns the children, with the auth state available to them
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [account, setAccountState] = useState<Account | null | undefined>(undefined)
@@ -42,27 +45,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(api.SESSION_ENDED_EVENT, onSessionEnded)
   }, [])
 
+  /** Checks the saved session again (the Try again button on the Can't connect screen). */
   const retryCheck = useCallback(() => {
     setCheckError(null)
     setAttempt((n) => n + 1)
   }, [])
 
+  /** Signs in and remembers the account; throws the server's message on failure. */
   const signIn = useCallback(async (username: string, password: string) => {
     setAccountState(await api.signIn(username, password))
     setSignedOut(false)
   }, [])
 
+  /** Creates the account, signs in and remembers it; throws the server's message on failure. */
   const signUp = useCallback(async (username: string, name: string, password: string) => {
     setAccountState(await api.signUp(username, name, password))
     setSignedOut(false)
   }, [])
 
+  /** Ends the session; RequireAuth then goes to the landing page. Throws if the server can't be reached. */
   const signOut = useCallback(async () => {
     await api.signOut()
     setAccountState(null)
     setSignedOut(true)
   }, [])
 
+  /** Replaces the remembered account, e.g. after the name changes. */
   const setAccount = useCallback((a: Account) => setAccountState(a), [])
 
   const value = useMemo(
@@ -72,7 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext value={value}>{children}</AuthContext>
 }
 
-/** Shown while the saved session is being checked, so pages don't flash the wrong thing. */
+/**
+ * Shown while the saved session is being checked, so pages don't flash the wrong thing.
+ *
+ * @returns a centered spinner, announced as "Loading"
+ */
 export function Checking() {
   return (
     <div className="checking" role="status" aria-label="Loading">
@@ -84,6 +96,8 @@ export function Checking() {
 /**
  * The session couldn't be checked, usually because the phone is offline. The installed app still
  * opens from its cache, so this says so instead of wrongly asking you to sign in again.
+ *
+ * @returns the message with the error and a Try again button
  */
 function CantConnect() {
   const { checkError, retryCheck } = useAuth()
@@ -109,6 +123,9 @@ function CantConnect() {
 /**
  * Signed-in pages: anyone else is sent to sign in, then brought back here.
  * Right after you sign out, it goes to the landing page instead.
+ *
+ * @param props.children the signed-in page
+ * @returns the page, a spinner, the Can't connect screen, or a redirect
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { account, signedOut, checkError } = useAuth()
@@ -124,6 +141,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 /**
  * Landing and sign-in pages: someone already signed in goes straight to the app. This is also
  * what moves you on after signing in: back to the page that sent you to sign in, or /home.
+ *
+ * @param props.children the page for visitors
+ * @returns the page, a spinner, or a redirect into the app
  */
 export function RedirectIfSignedIn({ children }: { children: ReactNode }) {
   const { account, checkError } = useAuth()

@@ -1,3 +1,4 @@
+// Tests for the fuel log page (App.tsx) with the API mocked: loading, adding, editing and deleting logs.
 import { StrictMode } from 'react'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -31,15 +32,19 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+/** Renders the page and waits until the three test logs have loaded. */
 async function renderApp() {
   render(<App />)
   await screen.findByText('Oct 15, 2026')
 }
 
+/** Types into the field with this label, like a user would. */
 const type = (label: string, text: string) => userEvent.type(screen.getByLabelText(label), text)
+/** The submit button, whether it says "Log Fuel Entry" or "Saving…". */
 const logButton = () => screen.getByRole('button', { name: /Log Fuel Entry|Saving…/ })
 
 describe('loading', () => {
+  /** While loading the page says so; then every log appears, highest odometer first, with its cost. */
   it('shows Loading… then the history, newest first', async () => {
     render(<App />)
     expect(screen.getByText('Loading…')).toBeInTheDocument()
@@ -50,12 +55,14 @@ describe('loading', () => {
     expect(screen.queryByText('Loading…')).toBeNull()
   })
 
+  /** A new user sees "No fuel entries logged yet." instead of an empty card. */
   it('shows an empty state with no logs', async () => {
     listMock.mockResolvedValue([])
     render(<App />)
     expect(await screen.findByText('No fuel entries logged yet.')).toBeInTheDocument()
   })
 
+  /** A failed load shows why with a Retry button, and Retry loads the history. */
   it('shows a load error and retries', async () => {
     listMock.mockRejectedValueOnce(new Error('Backend down'))
     render(<App />)
@@ -67,6 +74,7 @@ describe('loading', () => {
     expect(screen.queryByText('Backend down')).toBeNull()
   })
 
+  /** If Retry fails too, the new reason replaces the old one. */
   it('keeps the error if the retry also fails', async () => {
     listMock.mockRejectedValue(new Error('Backend down'))
     render(<App />)
@@ -77,6 +85,7 @@ describe('loading', () => {
     expect(await screen.findByText(/Still down/)).toBeInTheDocument()
   })
 
+  /** StrictMode loads twice in development; the discarded first answer must not show. */
   it('ignores the first, discarded load under StrictMode', async () => {
     listMock.mockResolvedValueOnce([]).mockResolvedValue(threeLogs())
     render(
@@ -88,6 +97,7 @@ describe('loading', () => {
     expect(screen.queryByText('No fuel entries logged yet.')).toBeNull()
   })
 
+  /** A failure from the discarded first load must not show an error either. */
   it('ignores a discarded failed load under StrictMode', async () => {
     listMock.mockRejectedValueOnce(new Error('stale')).mockResolvedValue(threeLogs())
     render(
@@ -101,6 +111,7 @@ describe('loading', () => {
 })
 
 describe('new fuel entry', () => {
+  /** The previous odometer comes from the latest log, the calculation updates as you type, and saving clears the form. */
   it('uses the latest odometer as previous and logs an entry', async () => {
     createMock.mockResolvedValue(makeLog(4, '2026-10-24', 12900, 13200))
     await renderApp()
@@ -131,6 +142,7 @@ describe('new fuel entry', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Log saved')
   })
 
+  /** With no logs yet, the form asks for the previous odometer and sends it with the first log. */
   it('asks for the previous odometer on the very first log and sends it', async () => {
     listMock.mockResolvedValue([])
     createMock.mockResolvedValue(makeLog(1, '2026-10-24', 12000, 12300))
@@ -147,6 +159,7 @@ describe('new fuel entry', () => {
     expect(screen.getByLabelText('Previous Odometer')).toHaveValue('')
   })
 
+  /** Typing a reading that isn't higher than the previous one explains why the button is disabled. */
   it('explains why an equal or lower odometer is blocked', async () => {
     await renderApp()
 
@@ -157,6 +170,7 @@ describe('new fuel entry', () => {
     expect(screen.queryByText(/Current odometer must be greater/)).toBeNull()
   })
 
+  /** The date can be changed; clearing it puts today back; after saving it resets to today. */
   it('lets you pick a date and falls back to today when it is cleared', async () => {
     createMock.mockResolvedValue(makeLog(4, '2026-10-20', 12900, 13200))
     await renderApp()
@@ -176,12 +190,14 @@ describe('new fuel entry', () => {
     expect(date).toHaveValue('2026-10-24')
   })
 
+  /** Enter in an invalid form sends nothing. */
   it('does not submit an invalid form with Enter', async () => {
     await renderApp()
     await type('Current Odometer', '12000{Enter}')
     expect(createMock).not.toHaveBeenCalled()
   })
 
+  /** While saving, the button says Saving… and a second submit isn't sent. */
   it('ignores a second submit while saving', async () => {
     let finish!: () => void
     createMock.mockReturnValue(new Promise((resolve) => (finish = () => resolve(makeLog(4, '2026-10-24', 12900, 13200)))))
@@ -200,6 +216,7 @@ describe('new fuel entry', () => {
     await vi.waitFor(() => expect(logButton()).toHaveTextContent('Log Fuel Entry'))
   })
 
+  /** Letters, commas and symbols can't get into the number fields. */
   it('only lets numbers be typed into the number fields', async () => {
     await renderApp()
 
@@ -212,6 +229,7 @@ describe('new fuel entry', () => {
     expect(screen.getByLabelText('Price Per Gallon')).toHaveValue('3.49')
   })
 
+  /** A failed save shows the reason and an error toast, and keeps the typed values for another try. */
   it('shows a save error and keeps what was typed', async () => {
     createMock.mockRejectedValue(new Error('Gallons must be greater than 0.'))
     await renderApp()
@@ -231,6 +249,7 @@ describe('new fuel entry', () => {
 })
 
 describe('editing a log', () => {
+  /** Edit turns the row into inputs, blocks reaching the next log, and saving refreshes the list. */
   it('edits a row in place and refreshes after saving', async () => {
     updateMock.mockResolvedValue(makeLog(1, '2026-10-01', 12000, 12400))
     await renderApp()
@@ -262,6 +281,7 @@ describe('editing a log', () => {
     expect(screen.getByText('Miles driven: 200')).toBeInTheDocument()
   })
 
+  /** The latest log has no upper limit and no editable previous odometer. */
   it('treats the newest log as having no next log', async () => {
     await renderApp()
     await userEvent.click(screen.getByRole('button', { name: 'Edit entry from Oct 15, 2026' }))
@@ -273,6 +293,7 @@ describe('editing a log', () => {
     expect(within(editor).getByRole('button', { name: 'Save' })).toBeEnabled()
   })
 
+  /** Cancel throws away the edit and sends nothing. */
   it('Cancel puts the row back unchanged', async () => {
     await renderApp()
     await userEvent.click(screen.getByRole('button', { name: 'Edit entry from Oct 8, 2026' }))
@@ -292,6 +313,7 @@ describe('deleting a log', () => {
   const confirmDelete = (user: Pick<typeof userEvent, 'click'> = userEvent) =>
     user.click(within(dialog()).getByRole('button', { name: 'Delete' }))
 
+  /** Delete asks first, with Cancel focused; cancelling deletes nothing. */
   it('asks for confirmation in a dialog, and does nothing if cancelled', async () => {
     await renderApp()
 
@@ -304,6 +326,7 @@ describe('deleting a log', () => {
     expect(deleteMock).not.toHaveBeenCalled()
   })
 
+  /** Escape or a tap outside the dialog cancels; a tap inside it doesn't. */
   it('cancels with Escape or a tap on the backdrop', async () => {
     await renderApp()
 
@@ -324,6 +347,7 @@ describe('deleting a log', () => {
     expect(deleteMock).not.toHaveBeenCalled()
   })
 
+  /** Confirming deletes the log and refreshes the list. */
   it('deletes after confirming and refreshes', async () => {
     deleteMock.mockResolvedValue()
     await renderApp()
@@ -337,6 +361,7 @@ describe('deleting a log', () => {
     await vi.waitFor(() => expect(screen.queryByText('Oct 15, 2026')).toBeNull())
   })
 
+  /** A green check mark toast confirms the delete and goes away by itself. */
   it('shows a "Log deleted" check mark that dismisses itself', async () => {
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'], shouldAdvanceTime: true })
     vi.setSystemTime(new Date(2026, 9, 24))
@@ -355,6 +380,7 @@ describe('deleting a log', () => {
     expect(screen.queryByRole('status')).toBeNull()
   })
 
+  /** A failed delete shows the reason and an error toast. */
   it('shows a delete error', async () => {
     deleteMock.mockRejectedValue(new Error('Fuel log 3 not found.'))
     await renderApp()
