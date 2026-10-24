@@ -21,7 +21,12 @@ import {
 } from './fuel.ts'
 import type { FuelLog } from './fuel.ts'
 
-// Port of ContentView.swift
+/**
+ * The fuel log at /home, ported from ContentView.swift: the New Fuel Entry form with its live
+ * calculation, and the history with edit and delete.
+ *
+ * @returns the page (two columns on desktop, one on phones)
+ */
 export default function App() {
   // Swift: @Query(sort: \FuelLog.odometer, order: .reverse) — the API returns them in that order.
   const [fuelLogs, setFuelLogs] = useState<FuelLog[] | null>(null)
@@ -47,10 +52,18 @@ export default function App() {
   const [toast, setToast] = useState<{ key: number; message: string; variant: ToastVariant } | null>(
     null,
   )
+  /**
+   * Shows the toast, replaying its animation even for the same message.
+   *
+   * @param message e.g. "Log saved"
+   * @param variant success (default) or error
+   */
   const showToast = (message: string, variant: ToastVariant = 'success') =>
     setToast((t) => ({ key: (t?.key ?? 0) + 1, message, variant }))
+  /** Removes the toast once it has finished (called by Toast). */
   const hideToast = useCallback(() => setToast(null), [])
 
+  /** Reloads the history from the server; a failure shows the load error with Retry. */
   const refresh = useCallback(async () => {
     try {
       setFuelLogs(await listFuelLogs())
@@ -98,7 +111,12 @@ export default function App() {
       ? `Current odometer must be greater than ${formatWhole(previousOdometerValue)} mi.`
       : null
 
-  // Swift: logFuelEntry()
+  /**
+   * Swift: logFuelEntry(). Saves the form, then clears it and reloads the history.
+   * On failure the typed values stay and the reason is shown.
+   *
+   * @param event the form submit (button or Enter)
+   */
   async function logFuelEntry(event: FormEvent) {
     event.preventDefault()
     if (!formIsValid || saving) return
@@ -129,7 +147,12 @@ export default function App() {
     }
   }
 
-  // Swift: deleteLogs(at:) — swipe-to-delete becomes a Delete button with a confirmation dialog.
+  /**
+   * Swift: deleteLogs(at:) — swipe-to-delete becomes a Delete button with a confirmation dialog.
+   * Called once the dialog is confirmed.
+   *
+   * @param log the log to delete
+   */
   async function deleteLog(log: FuelLog) {
     setPendingDelete(null)
     setActionError(null)

@@ -2,6 +2,9 @@
  * Registers public/sw.js so the app can be installed to the home screen.
  * Only in production builds: in `npm run dev` a service worker would cache files
  * and hide your edits.
+ *
+ * @param isProduction whether this is a production build (parameter so tests can choose)
+ * @param nav the browser's navigator (parameter so tests can pass a fake)
  */
 export function registerServiceWorker(
   isProduction: boolean = import.meta.env.PROD,

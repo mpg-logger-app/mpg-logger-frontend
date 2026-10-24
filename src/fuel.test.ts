@@ -1,3 +1,4 @@
+// Unit tests for fuel.ts: parsing, input filters, calculations, validation and formatting ported from the Swift app.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   calcMilesDriven,
@@ -16,6 +17,7 @@ import {
 } from './fuel.ts'
 
 describe('parseNumber', () => {
+  /** Whole numbers and decimals (with or without a leading digit) are read. */
   it('reads plain numbers', () => {
     expect(parseNumber('12300')).toBe(12300)
     expect(parseNumber('3.49')).toBe(3.49)
@@ -23,18 +25,21 @@ describe('parseNumber', () => {
     expect(parseNumber('.5')).toBe(0.5)
   })
 
+  /** Empty text, letters, signs and two decimal points give null, where JavaScript's Number would give 0 or a number. */
   it('returns null for empty or invalid text (like Swift Double("..."))', () => {
     for (const text of ['', ' ', 'abc', '1,000', '-5', '1e3', '1.2.3', '.']) {
       expect(parseNumber(text)).toBeNull()
     }
   })
 
+  /** Digits that overflow to Infinity are treated as invalid. */
   it('returns null for a number too big to be finite', () => {
     expect(parseNumber('9'.repeat(400))).toBeNull()
   })
 })
 
 describe('input filters', () => {
+  /** Commas, letters and spaces typed or pasted into an odometer field are removed. */
   it('digitsOnly drops everything but digits', () => {
     expect(digitsOnly('12300')).toBe('12300')
     expect(digitsOnly('12,3a0-0 mi!')).toBe('12300')
@@ -42,6 +47,7 @@ describe('input filters', () => {
     expect(digitsOnly('abc')).toBe('')
   })
 
+  /** Price and gallons keep one decimal point; extra points and symbols are removed. */
   it('decimalOnly keeps digits and the first decimal point', () => {
     expect(decimalOnly('3.49')).toBe('3.49')
     expect(decimalOnly('$3.4.9')).toBe('3.49')
@@ -53,6 +59,7 @@ describe('input filters', () => {
 })
 
 describe('calculations', () => {
+  /** Miles driven only appears once both readings are typed and the current one is higher. */
   it('calcMilesDriven needs current > previous', () => {
     expect(calcMilesDriven(12000, 12300)).toBe(300)
     expect(calcMilesDriven(12000, 12000)).toBeNull()
@@ -61,6 +68,7 @@ describe('calculations', () => {
     expect(calcMilesDriven(12000, null)).toBeNull()
   })
 
+  /** MPG only appears with miles driven and gallons above zero. */
   it('calcMpg needs miles and gallons > 0', () => {
     expect(calcMpg(300, 10)).toBe(30)
     expect(calcMpg(300, 0)).toBeNull()
@@ -68,6 +76,7 @@ describe('calculations', () => {
     expect(calcMpg(300, null)).toBeNull()
   })
 
+  /** The cost shows $0 until both gallons and price are typed. */
   it('calcTotalCost treats missing values as 0', () => {
     expect(calcTotalCost(10, 3.5)).toBe(35)
     expect(calcTotalCost(null, 3.5)).toBe(0)
@@ -76,10 +85,12 @@ describe('calculations', () => {
 })
 
 describe('isFormValid', () => {
+  /** A fully typed, valid entry enables the Log Fuel Entry button. */
   it('accepts a complete, valid entry', () => {
     expect(isFormValid(12000, 12300, 10, 3.49)).toBe(true)
   })
 
+  /** Any empty field keeps the button disabled. */
   it('rejects missing values', () => {
     expect(isFormValid(null, 12300, 10, 3.49)).toBe(false)
     expect(isFormValid(12000, null, 10, 3.49)).toBe(false)
@@ -87,6 +98,7 @@ describe('isFormValid', () => {
     expect(isFormValid(12000, 12300, 10, null)).toBe(false)
   })
 
+  /** Zeros, and a reading that doesn't go up, keep the button disabled. */
   it('rejects zero values and equal or lower readings', () => {
     expect(isFormValid(0, 12300, 10, 3.49)).toBe(false)
     expect(isFormValid(12000, 12000, 10, 3.49)).toBe(false)
@@ -96,11 +108,13 @@ describe('isFormValid', () => {
 })
 
 describe('editProblem', () => {
+  /** A valid edit has no problem to show. */
   it('is null for a valid edit', () => {
     expect(editProblem(12000, 12300, 10, 3, 12600)).toBeNull()
     expect(editProblem(12000, 99999, 10, 3, null)).toBeNull()
   })
 
+  /** Each rule an edit can break has its own message, in the order the fields appear. */
   it('explains each broken rule', () => {
     expect(editProblem(null, 12300, 10, 3, null)).toBe('Previous odometer must be greater than 0.')
     expect(editProblem(0, 12300, 10, 3, null)).toBe('Previous odometer must be greater than 0.')
@@ -117,12 +131,14 @@ describe('editProblem', () => {
 })
 
 describe('formatting', () => {
+  /** Odometers, decimals and prices look the same as in the iPad app. */
   it('formats numbers like the Swift app', () => {
     expect(formatWhole(12345.6)).toBe('12,346')
     expect(formatTwo(3)).toBe('3.00')
     expect(formatUsd(34.9)).toBe('$34.90')
   })
 
+  /** "2026-10-23" shows as Oct 23 in every US time zone, not Oct 22. */
   it('formats an ISO date as a local date (no off-by-one day)', () => {
     expect(formatLogDate('2026-10-23')).toBe('Oct 23, 2026')
   })
@@ -133,12 +149,14 @@ describe('todayIso', () => {
     vi.useRealTimers()
   })
 
+  /** Today's date is "YYYY-MM-DD" with leading zeros, as the date field needs. */
   it('pads month and day', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2026, 0, 5, 23, 30))
     expect(todayIso()).toBe('2026-01-05')
   })
 
+  /** Two-digit months and days aren't padded further. */
   it('works for two-digit months and days', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2026, 11, 25))
