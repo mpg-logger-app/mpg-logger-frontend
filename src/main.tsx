@@ -6,8 +6,6 @@ import AppRoutes from './AppRoutes.tsx'
 import { AuthProvider } from './auth.tsx'
 import { registerServiceWorker } from './registerServiceWorker.ts'
 
-registerServiceWorker()
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -17,3 +15,5 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>,
 )
+
+registerServiceWorker()

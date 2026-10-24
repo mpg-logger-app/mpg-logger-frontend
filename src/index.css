@@ -25,9 +25,6 @@
   color: var(--text);
   background: var(--bg);
   color-scheme: light dark;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,19 +46,27 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Stop iOS from enlarging text when the phone is turned sideways. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* No double-tap-to-zoom delay on buttons and links. */
+/* No double-tap-to-zoom delay on links and form fields (buttons get it in their own rule below). */
 a,
-button,
 input,
 label {
   touch-action: manipulation;
 }
 
+/* The safe-area insets keep content clear of the notch and home bar when installed as an app.
+   The top inset is handled by the top bar, which sits above this. */
 .app {
   max-width: calc(var(--page-max) + 32px);
   margin: 0 auto;
@@ -171,6 +176,8 @@ input[type='date'] {
 button {
   font: inherit;
   cursor: pointer;
+  /* No double-tap-to-zoom delay on phones. */
+  touch-action: manipulation;
 }
 
 button.primary {
@@ -230,8 +237,11 @@ button.cancel {
 }
 
 /* Same red as Delete, since Cancel throws away the edits. */
-button.cancel:hover:not(:disabled) {
-  color: #ff3b30;
+/* Only for a real mouse: on a phone a tap would leave it stuck red. */
+@media (hover: hover) {
+  button.cancel:hover:not(:disabled) {
+    color: #ff3b30;
+  }
 }
 
 .row-actions button:disabled {
@@ -278,6 +288,41 @@ button.link {
   color: inherit;
   text-decoration: underline;
   padding: 0;
+}
+
+/* Touch screens: finger-sized (44px, Apple's guideline) targets for the row buttons. */
+@media (pointer: coarse) {
+  .row-actions {
+    gap: 4px;
+  }
+
+  .row-actions button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 8px;
+  }
+}
+
+/* Phones: the edit row puts Save / Cancel under the fields so the inputs get the full width. */
+@media (max-width: 480px) {
+  .history.editing {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .editing .row-actions {
+    justify-content: flex-end;
+    border-top: 0.5px solid var(--separator);
+    padding-top: 6px;
+  }
+
+  .edit-field input {
+    width: 8em;
+  }
+
+  .edit-field input[type='date'] {
+    width: auto;
+  }
 }
 
 .banner {
@@ -1102,19 +1147,8 @@ input.row-input {
 
 /* ---------- Touch screens ---------- */
 /* Fingers need bigger targets than a mouse: at least 44px, as Apple recommends. */
+/* The history row buttons are covered by the earlier touch-screen rule. */
 @media (pointer: coarse) {
-  button.edit,
-  button.delete,
-  button.save,
-  button.cancel {
-    min-height: 44px;
-    padding: 0 6px;
-  }
-
-  .row-actions {
-    gap: 8px;
-  }
-
   .menu-item {
     min-height: 44px;
     padding: 12px;
