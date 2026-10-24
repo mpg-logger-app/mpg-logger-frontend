@@ -7,7 +7,11 @@ import { useAuth } from './useAuth.ts'
 import Toast from './Toast.tsx'
 import type { ToastVariant } from './Toast.tsx'
 
-/** /account: change your name. The username is fixed, and password changes are coming later. */
+/**
+ * /account: change your name. The username is fixed, and password changes are coming later.
+ *
+ * @returns the page (details beside password on desktop)
+ */
 export default function AccountPage() {
   const { account, setAccount } = useAuth()
   const [name, setName] = useState(account!.name)
@@ -15,14 +19,26 @@ export default function AccountPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [toast, setToast] = useState<{ key: number; message: string; variant: ToastVariant } | null>(null)
+  /**
+   * Shows the toast, replaying its animation even for the same message.
+   *
+   * @param message e.g. "Name saved"
+   * @param variant success (default) or error
+   */
   const showToast = (message: string, variant: ToastVariant = 'success') =>
     setToast((t) => ({ key: (t?.key ?? 0) + 1, message, variant }))
+  /** Removes the toast once it has finished (called by Toast). */
   const hideToast = useCallback(() => setToast(null), [])
 
   const hasChanges = name.trim() !== account!.name
   const problem = nameProblem(name)
   const canSave = hasChanges && problem === null && !saving
 
+  /**
+   * Saves the trimmed name and updates it everywhere (top bar included).
+   *
+   * @param event the form submit (Save Changes or Enter)
+   */
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!canSave) return

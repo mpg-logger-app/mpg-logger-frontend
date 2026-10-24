@@ -17,16 +17,25 @@ import {
 import type { FuelLog } from './fuel.ts'
 
 interface Props {
+  /** The log being edited; the inputs start with its values. */
   log: FuelLog
   /** Only the oldest log's previous odometer was typed in; the rest follow the log before them. */
   isOldest: boolean
   /** Odometer of the next (newer) log, or null if this is the latest log. */
   nextOdometer: number | null
+  /** Called after a successful save; the parent refreshes the list and closes the editor. */
   onSaved: () => Promise<void>
+  /** Called for Cancel or Escape. */
   onCancel: () => void
 }
 
-/** A history row turned into inputs, edited in place. */
+/**
+ * A history row turned into inputs, edited in place. Save is only enabled once something
+ * changed and the values pass the same rules as the server.
+ *
+ * @param props see Props
+ * @returns the editing form, in place of the history row
+ */
 export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, onCancel }: Props) {
   const [date, setDate] = useState(log.date)
   const [previousOdometer, setPreviousOdometer] = useState(String(log.previousOdometer))
@@ -56,6 +65,11 @@ export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, on
   const problem = editProblem(previousValue, odometerValue, gallonsValue, priceValue, nextOdometer)
   const canSave = hasChanges && problem === null && !saving
 
+  /**
+   * Sends the edit. On failure the editor stays open with the server's reason.
+   *
+   * @param event the form submit (Save or Enter)
+   */
   async function save(event: FormEvent) {
     event.preventDefault()
     if (!canSave) return
@@ -76,6 +90,11 @@ export default function FuelLogEditor({ log, isOldest, nextOdometer, onSaved, on
     }
   }
 
+  /**
+   * Escape anywhere in the row cancels the edit (except while saving).
+   *
+   * @param event a key press inside the editor
+   */
   function cancelOnEscape(event: KeyboardEvent) {
     if (event.key === 'Escape' && !saving) onCancel()
   }

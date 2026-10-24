@@ -1,6 +1,11 @@
 import { Link } from 'react-router'
 
-/** The app's logo and name, linking to `to`. */
+/**
+ * The app's logo and name, used at the left of every top bar.
+ *
+ * @param props.to where it links: "/" for visitors, "/home" inside the app
+ * @returns the logo link
+ */
 export function Brand({ to }: { to: string }) {
   return (
     <Link to={to} className="brand">
@@ -12,6 +17,7 @@ export function Brand({ to }: { to: string }) {
   )
 }
 
+/** The four feature cards on the landing page. */
 const FEATURES = [
   {
     icon: '📝',
@@ -35,7 +41,11 @@ const FEATURES = [
   },
 ]
 
-/** The first page visitors see: what the app does, with sign in / sign up at the top right. */
+/**
+ * The first page visitors see: what the app does, with sign in / sign up at the top right.
+ *
+ * @returns the page: hero with a sample log, features, how it works
+ */
 export default function Landing() {
   return (
     <div className="landing">

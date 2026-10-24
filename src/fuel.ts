@@ -1,5 +1,6 @@
 // Types, parsing, calculations and formatting ported from ContentView.swift / FuelLog.swift.
 
+/** A saved fill-up as the API returns it, with the calculated values filled in. */
 export interface FuelLog {
   id: number
   date: string // "YYYY-MM-DD"
@@ -12,8 +13,10 @@ export interface FuelLog {
   totalCost: number
 }
 
+/** What is sent to add or edit a fill-up. */
 export interface NewFuelLog {
   date: string
+  /** Only read by the server for the very first log (add) or the oldest log (edit); otherwise null. */
   previousOdometer: number | null
   odometer: number
   gallons: number
@@ -24,6 +27,9 @@ export interface NewFuelLog {
  * Swift's Double("...") returns nil for anything that isn't a plain number.
  * JavaScript's Number("") is 0, so a stricter parser is used to keep the
  * same behaviour: empty or invalid text gives null.
+ *
+ * @param text what is in a number field, e.g. "12300" or "3.49"
+ * @returns the number, or null for empty or invalid text
  */
 export function parseNumber(text: string): number | null {
   if (!/^(\d+(\.\d*)?|\.\d+)$/.test(text)) {
@@ -36,18 +42,32 @@ export function parseNumber(text: string): number | null {
 /**
  * Input filters for the number fields: whatever is typed or pasted, only
  * digits get through ("12,3a00" -> "12300"). Odometers are whole miles.
+ *
+ * @param text what was typed or pasted
+ * @returns only its digits
  */
 export function digitsOnly(text: string): string {
   return text.replace(/\D/g, '')
 }
 
-/** Like digitsOnly, but keeps the first decimal point too ("$3.4.9" -> "3.49"). */
+/**
+ * Like digitsOnly, but keeps the first decimal point too ("$3.4.9" -> "3.49").
+ *
+ * @param text what was typed or pasted
+ * @returns its digits, with at most one decimal point
+ */
 export function decimalOnly(text: string): string {
   const [whole, ...rest] = text.replace(/[^\d.]/g, '').split('.')
   return rest.length ? `${whole}.${rest.join('')}` : whole
 }
 
-/** Swift: milesDriven (nil unless current > previous). */
+/**
+ * Swift: milesDriven (nil unless current > previous).
+ *
+ * @param previous where the tank started, or null if not known yet
+ * @param current the odometer at this fill-up, or null if not typed yet
+ * @returns the miles driven, or null if either reading is missing or current isn't above previous
+ */
 export function calcMilesDriven(previous: number | null, current: number | null): number | null {
   if (previous === null || current === null || !(current > previous)) {
     return null
@@ -55,7 +75,13 @@ export function calcMilesDriven(previous: number | null, current: number | null)
   return current - previous
 }
 
-/** Swift: calculatedMPG. */
+/**
+ * Swift: calculatedMPG.
+ *
+ * @param miles miles driven (from calcMilesDriven), or null
+ * @param gallons gallons pumped, or null
+ * @returns miles per gallon, or null if either is missing or gallons isn't above 0
+ */
 export function calcMpg(miles: number | null, gallons: number | null): number | null {
   if (miles === null || gallons === null || !(gallons > 0)) {
     return null
@@ -63,12 +89,26 @@ export function calcMpg(miles: number | null, gallons: number | null): number | 
   return miles / gallons
 }
 
-/** Swift: totalCost (missing values count as 0). */
+/**
+ * Swift: totalCost (missing values count as 0).
+ *
+ * @param gallons gallons pumped, or null
+ * @param price price per gallon, or null
+ * @returns what the fill-up cost ($0 until both are typed)
+ */
 export function calcTotalCost(gallons: number | null, price: number | null): number {
   return (gallons ?? 0) * (price ?? 0)
 }
 
-/** Swift: formIsValid. */
+/**
+ * Swift: formIsValid. The same rules the server checks.
+ *
+ * @param previous where the tank started
+ * @param current the odometer at this fill-up
+ * @param gallons gallons pumped
+ * @param price price per gallon
+ * @returns true when every value is typed, previous is above 0, current is above previous, and gallons and price are above 0
+ */
 export function isFormValid(
   previous: number | null,
   current: number | null,
@@ -85,6 +125,13 @@ export function isFormValid(
  * Why an edited log can't be saved, or null if it can. Same rules as the server:
  * the normal form rules, plus the odometer has to stay below the next log's,
  * because the next log will start at the edited reading.
+ *
+ * @param previous where the edited log starts
+ * @param current the edited odometer reading
+ * @param gallons the edited gallons
+ * @param price the edited price per gallon
+ * @param nextOdometer the next (newer) log's odometer, or null if this is the latest log
+ * @returns a message for the first broken rule, or null if the edit can be saved
  */
 export function editProblem(
   previous: number | null,
@@ -115,21 +162,31 @@ const twoDecimals = new Intl.NumberFormat('en-US', {
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
 const mediumDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' })
 
+/** A whole number with thousands separators: 12300 -> "12,300". */
 export const formatWhole = (n: number) => wholeNumber.format(n)
+/** Exactly two decimals: 32.4 -> "32.40". */
 export const formatTwo = (n: number) => twoDecimals.format(n)
+/** US dollars: 34.9 -> "$34.90". */
 export const formatUsd = (n: number) => usd.format(n)
 
 /**
  * "2026-10-23" -> "Oct 23, 2026".
  * new Date("2026-10-23") would be read as UTC midnight and show the
  * previous day in US time zones, so the parts are read as a local date.
+ *
+ * @param isoDate a date as "YYYY-MM-DD"
+ * @returns the date as shown in the history, e.g. "Oct 23, 2026"
  */
 export function formatLogDate(isoDate: string): string {
   const [year, month, day] = isoDate.split('-').map(Number)
   return mediumDate.format(new Date(year, month - 1, day))
 }
 
-/** Today's date as "YYYY-MM-DD" in the local time zone (not UTC). */
+/**
+ * Today's date in the local time zone (not UTC), for the date field's default.
+ *
+ * @returns today as "YYYY-MM-DD"
+ */
 export function todayIso(): string {
   const now = new Date()
   const mm = String(now.getMonth() + 1).padStart(2, '0')

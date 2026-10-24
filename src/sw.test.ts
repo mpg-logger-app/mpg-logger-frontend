@@ -56,6 +56,7 @@ beforeEach(() => {
   new Function('self', 'caches', 'fetch', source)(self, caches.api, fetchMock)
 })
 
+/** Fires the worker's install or activate event and waits for the work it started. */
 async function lifecycle(type: 'install' | 'activate') {
   let done: Promise<unknown> = Promise.resolve()
   listeners[type]({ waitUntil: (p) => (done = p), respondWith: () => {} })
@@ -80,9 +81,11 @@ function request(path: string, options?: { method?: string; mode?: string }): Pr
   return responded
 }
 
+/** What the worker has stored for a path, or undefined if nothing. */
 const cached = (path: string) => caches.stores.get('mpg-logger-v1')?.get(new URL(path, ORIGIN).href)
 
 describe('install / activate', () => {
+  /** Installing caches what the app needs to start offline and takes over without waiting. */
   it('pre-caches the app shell and activates right away', async () => {
     await lifecycle('install')
     expect(cached('/')).toBeDefined()
@@ -90,6 +93,7 @@ describe('install / activate', () => {
     expect(skipWaiting).toHaveBeenCalled()
   })
 
+  /** A new version removes the old version's caches when it activates. */
   it('deletes caches from older versions', async () => {
     await caches.api.open('mpg-logger-v0')
     await caches.api.open('mpg-logger-v1')
@@ -100,6 +104,7 @@ describe('install / activate', () => {
 })
 
 describe('fetch', () => {
+  /** /api requests, non-GET requests and other sites are never handled or cached. */
   it('leaves API calls, writes and other sites to the browser', async () => {
     expect(dispatch('/api/fuel-logs')).toBeNull()
     expect(dispatch('/', { method: 'POST' })).toBeNull()
@@ -107,6 +112,7 @@ describe('fetch', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  /** Online, pages come from the network (so a new deploy shows at once) and refresh the cached copy. */
   it('pages: uses the network and refreshes the cache', async () => {
     fetchMock.mockResolvedValue(new Response('fresh page'))
     const response = await request('/', { mode: 'navigate' })
@@ -114,6 +120,7 @@ describe('fetch', () => {
     expect(cached('/')).toBeDefined()
   })
 
+  /** Offline, any page (even a deep link) opens the cached app. */
   it('pages: falls back to the cached app when offline', async () => {
     await lifecycle('install')
     fetchMock.mockRejectedValue(new TypeError('offline'))
@@ -121,6 +128,7 @@ describe('fetch', () => {
     expect(await response.text()).toBe('cached /')
   })
 
+  /** A 404 is passed on but never stored, so it can't be served later. */
   it('does not cache error responses', async () => {
     fetchMock.mockResolvedValue(new Response('nope', { status: 404 }))
     const response = await request('/missing.png')
@@ -128,11 +136,13 @@ describe('fetch', () => {
     expect(cached('/missing.png')).toBeUndefined()
   })
 
+  /** With nothing cached, an offline request fails just as it would without the worker. */
   it('other files: offline with nothing cached fails like a normal request', async () => {
     fetchMock.mockRejectedValue(new TypeError('offline'))
     await expect(request('/icon-192.png')).rejects.toThrow('offline')
   })
 
+  /** Offline, icons and the manifest come from the cache. */
   it('other files: offline uses the cached copy', async () => {
     await lifecycle('install')
     fetchMock.mockRejectedValue(new TypeError('offline'))
@@ -140,6 +150,7 @@ describe('fetch', () => {
     expect(await response.text()).toBe('cached /icon-192.png')
   })
 
+  /** Vite's hashed files never change, so after the first fetch they come straight from the cache. */
   it('hashed /assets/: fetched once, then served from the cache', async () => {
     fetchMock.mockResolvedValue(new Response('js'))
     await request('/assets/index-abc.js')
@@ -149,6 +160,7 @@ describe('fetch', () => {
     expect(fetchMock).toHaveBeenCalledOnce()
   })
 
+  /** A failed asset fetch is passed on but not cached. */
   it('hashed /assets/: an error response is passed on but not cached', async () => {
     fetchMock.mockResolvedValue(new Response('gone', { status: 404 }))
     await request('/assets/old.js')

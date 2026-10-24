@@ -5,11 +5,15 @@ import { NAME_MAX, PASSWORD_MIN, USERNAME_MAX, nameProblem, passwordProblem, use
 import { useAuth } from './useAuth.ts'
 import { Brand } from './Landing.tsx'
 
+/** Which form the page shows: /signin or /signup. */
 type Mode = 'signin' | 'signup'
 
 /**
  * Sign in and sign up share one page with a switch at the top. Sign-up only asks for a
  * username, name and password. Once signed in, RedirectIfSignedIn moves on to /home.
+ *
+ * @param props.mode which form to show
+ * @returns the page
  */
 export default function AuthPage({ mode }: { mode: Mode }) {
   const { signIn, signUp } = useAuth()
@@ -25,6 +29,12 @@ export default function AuthPage({ mode }: { mode: Mode }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * Checks the fields (all sign-up rules, or both fields filled for sign-in), then signs up or in.
+   * On failure the reason is shown and the form can be sent again.
+   *
+   * @param event the form submit (button or Enter)
+   */
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (submitting) return

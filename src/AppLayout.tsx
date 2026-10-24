@@ -4,7 +4,12 @@ import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from './useAuth.ts'
 import { Brand } from './Landing.tsx'
 
-/** The bar across the top of the signed-in pages (/home and /account). */
+/**
+ * The bar across the top of the signed-in pages (/home and /account), with the menu under
+ * your name (Profile, Sign out). The page itself renders below it.
+ *
+ * @returns the top bar, a sign-out error if any, and the current page
+ */
 export default function AppLayout() {
   const { account, signOut } = useAuth()
   const { pathname } = useLocation()
@@ -13,6 +18,7 @@ export default function AppLayout() {
   // page (e.g. picking Profile) closes it without an effect.
   const [menuOpenOn, setMenuOpenOn] = useState<string | null>(null)
   const menuOpen = menuOpenOn === pathname
+  /** Closes the menu. */
   const closeMenu = () => setMenuOpenOn(null)
 
   const [signingOut, setSigningOut] = useState(false)
@@ -32,7 +38,12 @@ export default function AppLayout() {
     return () => document.removeEventListener('pointerdown', onPointerDown)
   }, [menuOpen])
 
-  // Escape closes the menu; the arrow keys move between its items.
+  /**
+   * Keyboard support for the menu: Escape closes it (focus goes back to your name), and the
+   * up and down arrows move between its items, wrapping around.
+   *
+   * @param event a key press inside the menu
+   */
   function onMenuKeyDown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       closeMenu()
@@ -47,6 +58,7 @@ export default function AppLayout() {
     items[next].focus()
   }
 
+  /** Signs out; if the server can't be reached you stay signed in and see why. */
   async function handleSignOut() {
     setSigningOut(true)
     setError(null)

@@ -3,6 +3,7 @@ import type { Account } from './account.ts'
 
 // Kept apart from auth.tsx so that file only exports components (for Vite's fast refresh).
 
+/** What useAuth() gives: who is signed in, and the actions that change it. */
 export interface AuthValue {
   /** undefined while checking for a saved session, null when signed out. */
   account: Account | null | undefined
@@ -19,9 +20,15 @@ export interface AuthValue {
   setAccount: (account: Account) => void
 }
 
+/** Filled in by AuthProvider; null outside it. */
 export const AuthContext = createContext<AuthValue | null>(null)
 
-/** Who is signed in, and the actions to sign in or out. Use inside <AuthProvider>. */
+/**
+ * Who is signed in, and the actions to sign in or out.
+ *
+ * @returns the auth state from the nearest AuthProvider
+ * @throws Error if used outside <AuthProvider>
+ */
 export function useAuth(): AuthValue {
   const value = useContext(AuthContext)
   if (!value) throw new Error('useAuth must be used inside <AuthProvider>')

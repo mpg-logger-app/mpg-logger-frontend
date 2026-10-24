@@ -12,6 +12,9 @@ import Landing from './Landing.tsx'
  * /signup    sign up
  * /home      the fuel log (signed in only)
  * /account   change your name (signed in only)
+ * anything else goes to /
+ *
+ * @returns the page for the current address
  */
 export default function AppRoutes() {
   return (
