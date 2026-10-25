@@ -50,23 +50,21 @@ Icons are in `public/`; the PNGs were generated from `public/favicon.svg` and
 
 ## Hosting
 
-The app and the Spring Boot API run together on one small Google Cloud VM, in Docker. The full
-step-by-step guide is
-[`HOSTING.md` in the backend repo](https://github.com/mpg-logger-app/mpg-logger-backend/blob/develop/HOSTING.md),
-whose `deploy/docker-compose.yml` builds this repo's image.
+The app is a free **Render static site**, with the Spring Boot API on Render too. Both are described
+in [`render.yaml` in the backend repo](https://github.com/mpg-logger-app/mpg-logger-backend/blob/develop/render.yaml),
+and the step-by-step guide is
+[`HOSTING.md`](https://github.com/mpg-logger-app/mpg-logger-backend/blob/develop/HOSTING.md) there.
+Render rebuilds the site on every push to `develop`:
 
-The [`Dockerfile`](Dockerfile) runs `npm run build` and puts `dist` into a **Caddy** web server, set up
-by the [`Caddyfile`](Caddyfile):
-
-- **`/api/*` is forwarded to the backend.** The browser only sees one address, so the app and the API
-  share one origin, the same way Vite does in development. That matters because the session cookie is
-  `SameSite=Lax` and scoped to `/api`: a backend on a different site wouldn't receive it.
+- **Build:** `npm ci && npm run build` (Node 24), publishing `dist`.
+- **`/api/*` is forwarded to the backend.** The browser only sees the site's address, so the app and
+  the API share one origin, the same way Vite does in development. That matters because the session
+  cookie is `SameSite=Lax` and scoped to `/api`: a backend on a different site wouldn't receive it.
 - **SPA fallback:** paths like `/home` are handled in the browser, so every path that isn't a real
   file gets `index.html`.
-- **Caching:** hashed `/assets/*` files are cached for a year; everything else (`index.html`, `sw.js`,
-  icons) is revalidated so a deploy shows up straight away.
+- **Caching:** every file is revalidated (`Cache-Control: no-cache`), so a deploy shows up straight away.
 
-Caddy gets the HTTPS certificate by itself, so the cookie is sent with `Secure` and the app can be installed.
+Render serves everything over HTTPS, so the cookie is sent with `Secure` and the app can be installed.
 
 ## Where things are
 
