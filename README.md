@@ -50,22 +50,23 @@ Icons are in `public/`; the PNGs were generated from `public/favicon.svg` and
 
 ## Hosting
 
-The app is hosted for free on **Netlify**, with the Spring Boot API on Google Cloud Run. The full
+The app and the Spring Boot API run together on one small Google Cloud VM, in Docker. The full
 step-by-step guide is
-[`HOSTING.md` in the backend repo](https://github.com/mpg-logger-app/mpg-logger-backend/blob/develop/HOSTING.md).
-[`netlify.toml`](netlify.toml) holds the whole Netlify setup:
+[`HOSTING.md` in the backend repo](https://github.com/mpg-logger-app/mpg-logger-backend/blob/develop/HOSTING.md),
+whose `deploy/docker-compose.yml` builds this repo's image.
 
-- **Build:** `npm run build`, publishing `dist`.
-- **`/api/*` is forwarded to Cloud Run** (put the backend's address in `netlify.toml` once it is
-  deployed). The browser only sees the Netlify address, so the app and the API share one origin, the
-  same way Vite does in development. That matters because the session cookie is `SameSite=Lax` and
-  scoped to `/api`: a backend on a different site wouldn't receive it.
+The [`Dockerfile`](Dockerfile) runs `npm run build` and puts `dist` into a **Caddy** web server, set up
+by the [`Caddyfile`](Caddyfile):
+
+- **`/api/*` is forwarded to the backend.** The browser only sees one address, so the app and the API
+  share one origin, the same way Vite does in development. That matters because the session cookie is
+  `SameSite=Lax` and scoped to `/api`: a backend on a different site wouldn't receive it.
 - **SPA fallback:** paths like `/home` are handled in the browser, so every path that isn't a real
   file gets `index.html`.
-- **Caching:** `index.html` and `sw.js` are always revalidated so a deploy shows up straight away;
-  hashed `/assets/*` files are cached for a year.
+- **Caching:** hashed `/assets/*` files are cached for a year; everything else (`index.html`, `sw.js`,
+  icons) is revalidated so a deploy shows up straight away.
 
-Netlify serves everything over HTTPS, so the cookie is sent with `Secure` and the app can be installed.
+Caddy gets the HTTPS certificate by itself, so the cookie is sent with `Secure` and the app can be installed.
 
 ## Where things are
 
